@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-react-webapp
+  name: nginx-react-webapp
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: nginx-react-webapp
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: nginx-react-webapp
+    spec:
+      containers:
+      - image: arun/multi-client
+        name: sidecar-container1-client
+		ports:
+            - containerPort: 3000
+        resources: {}
+        volumeMounts:
+          - name: var-logs
+            mountPath: /var/log
+      - image: arun/multi-server
+        name: sidecar-container2-server
+        resources: {}
+		ports:
+            - containerPort: 5000
+        volumeMounts:
+          - name: var-logs
+            mountPath: /var/log
+		env:
+            - name: REDIS_HOST
+              value: redis-cluster-ip-service
+            - name: REDIS_PORT
+              value: '6379'
+            - name: PGUSER
+              value: postgres
+            - name: PGHOST
+              value: postgres-cluster-ip-service
+            - name: PGPORT
+              value: '5432'
+            - name: PGDATABASE
+              value: postgres
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgpassword
+                  key: PGPASSWORD	
+      - image: postgres
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgpassword
+                  key: PGPASSWORD
+	  - image: redis
+	     ports:
+            - containerPort: 6379
+	  - image: arun/multi-worker
+          env:
+            - name: REDIS_HOST
+              value: redis-cluster-ip-service
+            - name: REDIS_PORT
+              value: '6379'		
+
+		
+status: {}
+
